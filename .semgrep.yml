@@ -1,0 +1,7 @@
+rules:
+  - id: no-hardcoded-secrets
+    pattern: (?i)(password|secret|token|key)\s*=\s*['"][^'"]+['"]
+    message: Hardcoded secret detected
+    severity: ERROR
+    languages:
+      - python
