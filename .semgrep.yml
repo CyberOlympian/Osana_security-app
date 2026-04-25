@@ -1,7 +1,214 @@
 rules:
+  # Hardcoded Secrets Detection
   - id: no-hardcoded-secrets
-    pattern: (?i)(password|secret|token|key)\s*=\s*['"][^'"]+['"]
-    message: Hardcoded secret detected
+    pattern: (?i)(password|passwd|pwd|secret|token|api_key|apikey|auth_token|private_key|access_key|secret_key)\s*=\s*['"][^'"]+['"]
+    message: Hardcoded secret detected. Use environment variables or secrets management.
     severity: ERROR
     languages:
       - python
+    metadata:
+      category: security
+      confidence: HIGH
+
+  # Hardcoded Passwords in Functions
+  - id: no-hardcoded-passwords-in-functions
+    pattern: |
+      def $FUNC(...):
+        ...
+        $VAR = "..."
+        ...
+    pattern-regex: (password|passwd|secret|token)\s*=\s*['"][^'"]+['"]
+    message: Potential hardcoded credential in function. Use secure configuration.
+    severity: ERROR
+    languages:
+      - python
+
+  # Unsafe Eval Usage
+  - id: no-unsafe-eval
+    pattern: eval(...)
+    message: Use of eval() is dangerous and can lead to code injection. Avoid or sanitize input.
+    severity: ERROR
+    languages:
+      - python
+    metadata:
+      category: security
+      cwe: "CWE-95"
+
+  # Unsafe Exec Usage
+  - id: no-unsafe-exec
+    pattern: exec(...)
+    message: Use of exec() is dangerous. Avoid dynamic code execution.
+    severity: ERROR
+    languages:
+      - python
+
+  # SQL Injection Detection (Basic)
+  - id: sql-injection-risk
+    patterns:
+      - pattern-either:
+          - pattern: |
+              cursor.execute($QUERY + ...)
+          - pattern: |
+              cursor.execute(f"...{$VAR}...")
+          - pattern: |
+              cursor.execute("..." + $VAR + "...")
+      - pattern-not: |
+          cursor.execute($QUERY, $PARAMS)
+    message: Potential SQL injection. Use parameterized queries.
+    severity: ERROR
+    languages:
+      - python
+    metadata:
+      category: security
+      cwe: "CWE-89"
+
+  # Flask Debug Mode in Production
+  - id: flask-debug-enabled
+    pattern: |
+      app.run(debug=True, ...)
+    message: Debug mode enabled in production. Set debug=False for production.
+    severity: ERROR
+    languages:
+      - python
+    metadata:
+      category: security
+
+  # Hardcoded AWS Keys
+  - id: aws-hardcoded-keys
+    pattern-regex: (AKIA|ABIA|ACCA)[A-Z0-9]{16}
+    message: Hardcoded AWS access key detected. Use IAM roles or environment variables.
+    severity: ERROR
+    languages:
+      - python
+      - yaml
+      - json
+
+  # Hardcoded GitHub Tokens
+  - id: github-token-hardcoded
+    pattern-regex: (ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36}
+    message: Hardcoded GitHub token detected. Use GitHub Secrets.
+    severity: ERROR
+    languages:
+      - python
+      - yaml
+      - json
+
+  # Environment Variable Exposure
+  - id: env-exposure
+    pattern: |
+      os.environ.get($KEY)
+    message: Consider not logging or exposing environment variable values.
+    severity: WARNING
+    languages:
+      - python
+
+  # Pickle Deserialization (Unsafe)
+  - id: unsafe-pickle-load
+    pattern-either:
+      - pattern: pickle.loads(...)
+      - pattern: pickle.load(...)
+    message: Pickle deserialization can execute arbitrary code. Use JSON or safe alternatives.
+    severity: ERROR
+    languages:
+      - python
+    metadata:
+      category: security
+      cwe: "CWE-502"
+
+  # Path Traversal Risk
+  - id: path-traversal
+    patterns:
+      - pattern-either:
+          - pattern: open($PATH, ...)
+          - pattern: os.path.join($ROOT, $INPUT)
+      - pattern-regex: (\.\.\/|\.\.\\)
+    message: Potential path traversal. Validate and sanitize file paths.
+    severity: WARNING
+    languages:
+      - python
+
+  # Subprocess with Shell=True (Dangerous)
+  - id: subprocess-shell-true
+    pattern: |
+      subprocess.run(..., shell=True)
+    message: Using shell=True in subprocess is dangerous. Avoid or sanitize input.
+    severity: ERROR
+    languages:
+      - python
+    metadata:
+      category: security
+      cwe: "CWE-78"
+
+  # Assert Statements in Production
+  - id: assert-in-production
+    pattern: assert ...
+    message: Assert statements are disabled in production with -O flag. Use proper error handling.
+    severity: WARNING
+    languages:
+      - python
+
+  # Print Statements in Production
+  - id: print-statement
+    pattern: print(...)
+    message: Print statements in production expose information. Use proper logging.
+    severity: WARNING
+    languages:
+      - python
+
+  # HTTP Instead of HTTPS
+  - id: http-insecure
+    pattern-either:
+      - pattern: http://
+      - pattern: requests.get("http://...")
+    message: Using HTTP instead of HTTPS sends data insecurely. Use HTTPS.
+    severity: WARNING
+    languages:
+      - python
+      - yaml
+      - json
+
+  # Weak Hashing Algorithms
+  - id: weak-hash-md5
+    pattern-either:
+      - pattern: hashlib.md5(...)
+      - pattern: hashlib.sha1(...)
+    message: MD5 and SHA1 are cryptographically broken. Use SHA256 or stronger.
+    severity: ERROR
+    languages:
+      - python
+    metadata:
+      category: security
+
+  # JWT None Algorithm (Critical)
+  - id: jwt-none-algorithm
+    pattern: |
+      jwt.decode(..., algorithms=['none'], ...)
+    message: JWT with 'none' algorithm bypasses signature verification. Critical vulnerability.
+    severity: ERROR
+    languages:
+      - python
+    metadata:
+      category: security
+      cwe: "CWE-345"
+
+  # YAML Loader Unsafe
+  - id: unsafe-yaml-load
+    pattern: yaml.load(...)
+    message: yaml.load() without SafeLoader is dangerous. Use yaml.safe_load().
+    severity: ERROR
+    languages:
+      - python
+    metadata:
+      category: security
+
+  # XML External Entity (XXE) Risk
+  - id: xxe-risk
+    pattern: |
+      xml.etree.ElementTree.parse(...)
+    message: XML parsing may be vulnerable to XXE. Use defusedxml for untrusted XML.
+    severity: WARNING
+    languages:
+      - python
+    metadata:
+      category: security
+      cwe: "CWE-611"
