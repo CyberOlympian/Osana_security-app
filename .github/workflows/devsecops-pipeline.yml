@@ -82,19 +82,19 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/angelosana/security-app:latest
+          tags: ghcr.io/cyberolympian/osana_security-app:latest
 
       - name: Generate Container SBOM
         uses: anchore/sbom-action@v0
         with:
-          image: ghcr.io/angelosana/security-app:latest
+          image: ghcr.io/cyberolympian/osana_security-app:latest
           format: "cyclonedx-json"
           output-file: "container-sbom-cdx.json"
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v1
         with:
-          subject-name: ghcr.io/angelosana/security-app
+          subject-name: ghcr.io/cyberolympian/osana_security-app
           subject-digest: ${{ steps.build-image.outputs.digest }}
           push-to-registry: true
 
